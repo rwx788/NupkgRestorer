@@ -1,11 +1,13 @@
-﻿using NuGet.Common;
+﻿using System.CommandLine;
+using NuGet.Common;
 using NuGet.Configuration;
 using NuGet.Packaging;
-using NuGet.Packaging.Signing;
-using NuGet.Protocol.Core.Types;
-using System.CommandLine;
 using NuGet.Packaging.Core;
 using NuGet.Packaging.PackageExtraction;
+using NuGet.Packaging.Signing;
+using NuGet.Protocol.Core.Types;
+
+namespace NupkgRestorer;
 
 internal class NupkgRestorer
 {
@@ -22,11 +24,11 @@ internal class NupkgRestorer
         rootCommand.AddOption(packagesDirectoryOption);
 
         rootCommand.SetHandler(async (offlineFeedDirectory, packagesDirectory) => 
-        { 
-            await ExpandPackagesFromOfflineFeed(offlineFeedDirectory, packagesDirectory); 
-        },
-        offlineFeedOption,
-        packagesDirectoryOption);
+            { 
+                await ExpandPackagesFromOfflineFeed(offlineFeedDirectory, packagesDirectory); 
+            },
+            offlineFeedOption,
+            packagesDirectoryOption);
         
         return await rootCommand.InvokeAsync(args);
     }
@@ -40,23 +42,11 @@ internal class NupkgRestorer
         {
             var packageIdentity = new PackageArchiveReader(packageFile).GetIdentity();
 
-            bool isValidPackage;
-            if (OfflineFeedUtility.PackageExists(packageIdentity, offlineFeedDirectory, out isValidPackage))
-            {
-                if (isValidPackage)
-                {
-                    Console.WriteLine($"Package {packageIdentity} already exists and is valid.");
-                }
-                else
-                {
-                    Console.WriteLine($"Existing package {packageIdentity} is invalid.");
-                }
-            }
-            
             await ExpandPackageAsync(packageFile, offlineFeedDirectory);
             Console.WriteLine($"Package {packageIdentity} expanded successfully.");
         }
     }
+
     private static async Task ExpandPackageAsync(string packageFilePath, string packageDirectory)
     {
         var packageExtractionContext = new PackageExtractionContext(
