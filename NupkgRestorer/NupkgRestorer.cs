@@ -4,6 +4,8 @@ using NuGet.Packaging;
 using NuGet.Packaging.Signing;
 using NuGet.Protocol.Core.Types;
 using System.CommandLine;
+using NuGet.Packaging.Core;
+using NuGet.Packaging.PackageExtraction;
 
 internal class NupkgRestorer
 {
@@ -32,8 +34,8 @@ internal class NupkgRestorer
     private static async Task ExpandPackagesFromOfflineFeed(string offlineFeedDirectory, string packagesDirectory)
     {
         Console.WriteLine($"Unpacking packages from {packagesDirectory} to offline feed {offlineFeedDirectory}");
-        var packageFiles = Directory.GetFiles(packagesDirectory, "*.nupkg");
-
+        var packageFiles = Directory.GetFiles(packagesDirectory, "*" + PackagingCoreConstants.NupkgExtension);
+        
         foreach (var packageFile in packageFiles)
         {
             var packageIdentity = new PackageArchiveReader(packageFile).GetIdentity();
@@ -47,27 +49,19 @@ internal class NupkgRestorer
                 }
                 else
                 {
-                    Console.WriteLine($"Existing package {packageIdentity} is invalid, cleaning up.");
-                    // File.Delete(packageFile);
-                    // var packageDir = OfflineFeedUtility.GetPackageDirectory(packageIdentity, offlineFeedDirectory);
-                    // if(Directory.Exists(packageDir))
-                    //     Directory.Delete(packageDir, true);
+                    Console.WriteLine($"Existing package {packageIdentity} is invalid.");
                 }
-                    
             }
-            else
-            {
-                await ExpandPackageAsync(packageFile, offlineFeedDirectory);
-                Console.WriteLine($"Package {packageIdentity} expanded successfully.");
-            }
+            
+            await ExpandPackageAsync(packageFile, offlineFeedDirectory);
+            Console.WriteLine($"Package {packageIdentity} expanded successfully.");
         }
     }
-
     private static async Task ExpandPackageAsync(string packageFilePath, string packageDirectory)
     {
         var packageExtractionContext = new PackageExtractionContext(
             PackageSaveMode.Defaultv3,
-            XmlDocFileSaveMode.None,
+            PackageExtractionBehavior.XmlDocFileSaveMode,
             ClientPolicyContext.GetClientPolicy(NullSettings.Instance, NullLogger.Instance),
             NullLogger.Instance);
 
