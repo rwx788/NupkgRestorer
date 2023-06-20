@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-version=0.0.1
+version=0.0.2
 declare -a runtimes=("osx-x64" "osx.11.0-arm64" "linux-x64" "linux-arm64" "win-x64" "win-arm64")
 
 for runtime in "${runtimes[@]}"
@@ -27,5 +27,5 @@ do
         cp $publishdir/NupkgRestorer $BASEDIR/release/$releasedir/
     fi
     
-    zip -r $BASEDIR/release/NupkgRestorer-$version-$releasedir.zip $BASEDIR/release/$releasedir/*
+    zip -r -j $BASEDIR/release/NupkgRestorer-$version-$releasedir.zip $BASEDIR/release/$releasedir/*
 done
