@@ -6,10 +6,15 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <Version>0.0.1</Version>
+        <Configuration>Release</Configuration>
+        <PublishReadyToRun>true</PublishReadyToRun>
+        <PublishSingleFile>true</PublishSingleFile>
+        <PublishTrimmed>true</PublishTrimmed>
+        <SelfContained>true</SelfContained>
+        <RuntimeIdentifier>osx-x64</RuntimeIdentifier>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="NuGet.Client" Version="4.2.0"/>
         <PackageReference Include="NuGet.Common" Version="6.6.1"/>
         <PackageReference Include="NuGet.Protocol" Version="6.6.1"/>
         <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
