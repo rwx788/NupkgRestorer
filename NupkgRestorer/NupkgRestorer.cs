@@ -1,11 +1,11 @@
-﻿using System.CommandLine;
-using NuGet.Common;
+﻿using NuGet.Common;
 using NuGet.Configuration;
 using NuGet.Packaging;
 using NuGet.Packaging.Core;
 using NuGet.Packaging.PackageExtraction;
 using NuGet.Packaging.Signing;
 using NuGet.Protocol.Core.Types;
+using System.CommandLine;
 
 namespace NupkgRestorer;
 
@@ -15,6 +15,7 @@ internal class NupkgRestorer
     {
         var offlineFeedOption = new Option<string>("--feed", "The offline feed directory");
         var packagesDirectoryOption = new Option<string>("--packages", "The package directory");
+        var verboseLogOption = new Option<bool>("--verbose", "Print verbose logs");
 
         offlineFeedOption.IsRequired = true;
         packagesDirectoryOption.IsRequired = true;
@@ -22,29 +23,36 @@ internal class NupkgRestorer
         RootCommand rootCommand = new RootCommand("Unpacks nupkgs from packages directory to offline feed folder");
         rootCommand.AddOption(offlineFeedOption);
         rootCommand.AddOption(packagesDirectoryOption);
+        rootCommand.AddOption(verboseLogOption);
 
-        rootCommand.SetHandler(async (offlineFeedDirectory, packagesDirectory) => 
+        rootCommand.SetHandler(async (offlineFeedDirectory, packagesDirectory, verboseLog) => 
             { 
-                await ExpandPackagesFromOfflineFeed(offlineFeedDirectory, packagesDirectory); 
+                await ExpandPackagesFromOfflineFeed(offlineFeedDirectory, packagesDirectory, verboseLog); 
             },
             offlineFeedOption,
-            packagesDirectoryOption);
+            packagesDirectoryOption,
+            verboseLogOption);
         
         return await rootCommand.InvokeAsync(args);
     }
 
-    private static async Task ExpandPackagesFromOfflineFeed(string offlineFeedDirectory, string packagesDirectory)
+    private static async Task ExpandPackagesFromOfflineFeed(string offlineFeedDirectory, string packagesDirectory, bool verboseLog)
     {
         Console.WriteLine($"Unpacking packages from {packagesDirectory} to offline feed {offlineFeedDirectory}");
         var packageFiles = Directory.GetFiles(packagesDirectory, "*" + PackagingCoreConstants.NupkgExtension);
         
+        var extractionTasks = new List<Task>();
+
         foreach (var packageFile in packageFiles)
         {
-            var packageIdentity = new PackageArchiveReader(packageFile).GetIdentity();
-
-            await ExpandPackageAsync(packageFile, offlineFeedDirectory);
-            Console.WriteLine($"Package {packageIdentity} expanded successfully.");
+            extractionTasks.Add(ExpandPackageAsync(packageFile, offlineFeedDirectory));
+            if (verboseLog)
+            {
+                Console.WriteLine($"Package {packageFile} expanded successfully.");
+            }
         }
+        
+        await Task.WhenAll(extractionTasks);
     }
 
     private static async Task ExpandPackageAsync(string packageFilePath, string packageDirectory)
