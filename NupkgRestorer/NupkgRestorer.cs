@@ -40,12 +40,27 @@ internal class NupkgRestorer
     {
         Console.WriteLine($"Unpacking packages from {packagesDirectory} to offline feed {offlineFeedDirectory}");
         var packageFiles = Directory.GetFiles(packagesDirectory, "*" + PackagingCoreConstants.NupkgExtension);
-        
+        var maxConcurrency = 4;
+        var semaphore = new SemaphoreSlim(maxConcurrency, maxConcurrency);
         var extractionTasks = new List<Task>();
 
         foreach (var packageFile in packageFiles)
         {
-            extractionTasks.Add(ExpandPackageAsync(packageFile, offlineFeedDirectory));
+            await semaphore.WaitAsync();
+            
+            var extractionTask = Task.Factory.StartNew(async () =>
+            {
+              try
+              {
+                await ExpandPackageAsync(packageFile, offlineFeedDirectory);
+              }
+              finally
+              {
+                semaphore.Release();
+              }
+            });
+
+            extractionTasks.Add(extractionTask);
             if (verboseLog)
             {
                 Console.WriteLine($"Package {packageFile} expanded successfully.");
