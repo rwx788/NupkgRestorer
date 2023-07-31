@@ -48,11 +48,15 @@ internal class NupkgRestorer
         {
             await semaphore.WaitAsync();
             
-            var extractionTask = Task.Factory.StartNew(async () =>
+            var extractionTask = Task.Factory.StartNew(() =>
             {
               try
               {
-                await ExpandPackageAsync(packageFile, offlineFeedDirectory);
+                ExpandPackageAsync(packageFile, offlineFeedDirectory).Wait();
+                if (verboseLog)
+                {
+                    Console.WriteLine($"Package {packageFile} expanded successfully.");
+                }
               }
               finally
               {
@@ -61,10 +65,6 @@ internal class NupkgRestorer
             });
 
             extractionTasks.Add(extractionTask);
-            if (verboseLog)
-            {
-                Console.WriteLine($"Package {packageFile} expanded successfully.");
-            }
         }
         
         await Task.WhenAll(extractionTasks);
