@@ -5,7 +5,7 @@ declare -a runtimes=("osx-x64" "osx.11.0-arm64" "linux-x64" "linux-arm64" "win-x
 
 for runtime in "${runtimes[@]}"
 do
-   dotnet publish -c Release --self-contained --runtime $runtime
+   dotnet publish -c Release --self-contained true --runtime $runtime
 done
 
 BASEDIR=$(dirname "$0")
