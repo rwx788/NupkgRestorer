@@ -40,37 +40,16 @@ internal class NupkgRestorer
     {
         Console.WriteLine($"Unpacking packages from {packagesDirectory} to offline feed {offlineFeedDirectory}");
         var packageFiles = Directory.GetFiles(packagesDirectory, "*" + PackagingCoreConstants.NupkgExtension);
-        var maxConcurrency = 4;
-        var semaphore = new SemaphoreSlim(maxConcurrency, maxConcurrency);
-        var extractionTasks = new List<Task>();
+        var parallelOpts = new ParallelOptions { MaxDegreeOfParallelism = 4 };
 
-        foreach (var packageFile in packageFiles)
-        {
-            await semaphore.WaitAsync();
-            
-            var extractionTask = Task.Factory.StartNew(() =>
+        await Parallel.ForEachAsync(packageFiles, parallelOpts,
+            async (packageFile,token) =>
             {
-              try
-              {
-                ExpandPackageAsync(packageFile, offlineFeedDirectory).Wait();
-                if (verboseLog)
-                {
-                    Console.WriteLine($"Package {packageFile} expanded successfully.");
-                }
-              }
-              finally
-              {
-                semaphore.Release();
-              }
+                await ExpandPackageAsync(packageFile, offlineFeedDirectory, verboseLog, token);
             });
-
-            extractionTasks.Add(extractionTask);
-        }
-        
-        await Task.WhenAll(extractionTasks);
     }
 
-    private static async Task ExpandPackageAsync(string packageFilePath, string packageDirectory)
+    private static async Task ExpandPackageAsync(string packageFilePath, string packageDirectory, bool verboseLog, CancellationToken token)
     {
         var packageExtractionContext = new PackageExtractionContext(
             PackageSaveMode.Defaultv3,
@@ -87,6 +66,10 @@ internal class NupkgRestorer
             false,
             packageExtractionContext);
 
-        await OfflineFeedUtility.AddPackageToSource(offlineFeedAddContext, CancellationToken.None);
+        await OfflineFeedUtility.AddPackageToSource(offlineFeedAddContext, token);
+        if (verboseLog)
+        {
+            Console.WriteLine($"Package {packageFilePath} expanded successfully.");
+        }
     }
 }
