@@ -43,10 +43,28 @@ internal class NupkgRestorer
         var parallelOpts = new ParallelOptions { MaxDegreeOfParallelism = 4 };
 
         await Parallel.ForEachAsync(packageFiles, parallelOpts,
-            async (packageFile,token) =>
+          async (packageFile, token) =>
+          {
+            try
             {
-                await ExpandPackageAsync(packageFile, offlineFeedDirectory, verboseLog, token);
-            });
+              await ExpandPackageAsync(packageFile, offlineFeedDirectory, verboseLog, token);
+            }
+            catch (SignatureException exception)
+            {
+              // Removing likely corrupted nupkg file to retry
+              File.Delete(packageFile);
+              Console.Error.WriteLine($"Error during loading package {exception.PackageIdentity}: {exception.Code}");
+              foreach (var result in exception.Results)
+              {
+                Console.Error.WriteLine($"  Result: {result}");
+                foreach (var issue in result.Issues)
+                {
+                  Console.Error.WriteLine($"    Issue: {issue.Level} {issue.Code} {issue.Message}");
+                }
+              }
+              throw;
+            }
+          });
     }
 
     private static async Task ExpandPackageAsync(string packageFilePath, string packageDirectory, bool verboseLog, CancellationToken token)
