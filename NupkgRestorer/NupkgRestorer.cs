@@ -45,25 +45,30 @@ internal class NupkgRestorer
         await Parallel.ForEachAsync(packageFiles, parallelOpts,
           async (packageFile, token) =>
           {
-            try
-            {
-              await ExpandPackageAsync(packageFile, offlineFeedDirectory, verboseLog, token);
-            }
-            catch (SignatureException exception)
-            {
-              // Removing likely corrupted nupkg file to retry
-              File.Delete(packageFile);
-              Console.Error.WriteLine($"Error during loading package {exception.PackageIdentity}: {exception.Code}");
-              foreach (var result in exception.Results)
+              try
               {
-                Console.Error.WriteLine($"  Result: {result}");
-                foreach (var issue in result.Issues)
-                {
-                  Console.Error.WriteLine($"    Issue: {issue.Level} {issue.Code} {issue.Message}");
-                }
+                  await ExpandPackageAsync(packageFile, offlineFeedDirectory, verboseLog, token);
               }
-              throw;
-            }
+              catch (SignatureException exception)
+              {
+                  Console.Error.WriteLine(
+                      $"Error during loading package {exception.PackageIdentity}: {exception.Code}");
+                  foreach (var result in exception.Results)
+                  {
+                      Console.Error.WriteLine($"  Result: {result}");
+                      foreach (var issue in result.Issues)
+                      {
+                          Console.Error.WriteLine($"    Issue: {issue.Level} {issue.Code} {issue.Message}");
+                      }
+                  }
+
+                  throw;
+              }
+              finally
+              {
+                  // Removing source file once unpacked, or if file is corrupted to retry 
+                  File.Delete(packageFile);
+              }
           });
     }
 
