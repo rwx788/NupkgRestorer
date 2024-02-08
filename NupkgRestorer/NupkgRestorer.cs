@@ -64,9 +64,13 @@ internal class NupkgRestorer
 
                   throw;
               }
+              catch (Exception exception)
+              {
+                  Console.Error.WriteLine($"Unknown Error during loading package: {exception.Message}");
+              }
               finally
               {
-                  // Removing source file once unpacked, or if file is corrupted to retry 
+                  // Removing source file once unpacked, or if file is corrupted to retry
                   File.Delete(packageFile);
               }
           });
@@ -88,7 +92,7 @@ internal class NupkgRestorer
             false,
             false,
             packageExtractionContext);
-
+        
         await OfflineFeedUtility.AddPackageToSource(offlineFeedAddContext, token);
         if (verboseLog)
         {
