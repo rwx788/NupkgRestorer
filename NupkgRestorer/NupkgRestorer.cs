@@ -67,6 +67,7 @@ internal class NupkgRestorer
               catch (Exception exception)
               {
                   Console.Error.WriteLine($"Unknown Error during loading package: {exception.Message}");
+                  throw;
               }
               finally
               {
