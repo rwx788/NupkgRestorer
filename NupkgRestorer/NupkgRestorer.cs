@@ -11,12 +11,16 @@ namespace NupkgRestorer;
 
 internal class NupkgRestorer
 {
-    public static async Task<int> Main(string[] args)
+    const int SuccessExitCode = 0;
+    const int FailureExitCode = 1;
+
+    public static async Task Main(string[] args)
     {
         var offlineFeedOption = new Option<string>("--feed", "The offline feed directory");
         var packagesDirectoryOption = new Option<string>("--packages", "The package directory");
         var verboseLogOption = new Option<bool>("--verbose", "Print verbose logs");
 
+        var success = true;
         offlineFeedOption.IsRequired = true;
         packagesDirectoryOption.IsRequired = true;
 
@@ -27,20 +31,24 @@ internal class NupkgRestorer
 
         rootCommand.SetHandler(async (offlineFeedDirectory, packagesDirectory, verboseLog) => 
             { 
-                await ExpandPackagesFromOfflineFeed(offlineFeedDirectory, packagesDirectory, verboseLog); 
+                success = await ExpandPackagesFromOfflineFeed(offlineFeedDirectory, packagesDirectory, verboseLog);
             },
             offlineFeedOption,
             packagesDirectoryOption,
             verboseLogOption);
         
-        return await rootCommand.InvokeAsync(args);
+        await rootCommand.InvokeAsync(args);
+
+        Environment.Exit(success ? SuccessExitCode : FailureExitCode);
     }
 
-    private static async Task ExpandPackagesFromOfflineFeed(string offlineFeedDirectory, string packagesDirectory, bool verboseLog)
+    private static async Task<bool> ExpandPackagesFromOfflineFeed(string offlineFeedDirectory, string packagesDirectory, bool verboseLog)
     {
         Console.WriteLine($"Unpacking packages from {packagesDirectory} to offline feed {offlineFeedDirectory}");
         var packageFiles = Directory.GetFiles(packagesDirectory, "*" + PackagingCoreConstants.NupkgExtension);
         var parallelOpts = new ParallelOptions { MaxDegreeOfParallelism = 4 };
+        bool successFlag = true;
+        object lockObject = new object();
 
         await Parallel.ForEachAsync(packageFiles, parallelOpts,
           async (packageFile, token) =>
@@ -61,20 +69,26 @@ internal class NupkgRestorer
                           Console.Error.WriteLine($"    Issue: {issue.Level} {issue.Code} {issue.Message}");
                       }
                   }
-
-                  throw;
+                  lock (lockObject)
+                  {
+                      successFlag = false;
+                  }
               }
               catch (Exception exception)
               {
                   Console.Error.WriteLine($"Unknown Error during loading package: {exception.Message}");
-                  throw;
+                  lock (lockObject)
+                  {
+                      successFlag = false;
+                  }
               }
               finally
               {
                   // Removing source file once unpacked, or if file is corrupted to retry
-                  File.Delete(packageFile);
+                  //File.Delete(packageFile);
               }
           });
+        return successFlag;
     }
 
     private static async Task ExpandPackageAsync(string packageFilePath, string packageDirectory, bool verboseLog, CancellationToken token)
