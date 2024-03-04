@@ -17,7 +17,7 @@ internal class NupkgRestorer
     public static async Task Main(string[] args)
     {
         var offlineFeedOption = new Option<string>("--feed", "The offline feed directory");
-        var packagesDirectoryOption = new Option<string>("--packages", "The package directory");
+        var packagesDirectoryOption = new Option<string>("--packages", "The packages list in <package name> <package version>");
         var verboseLogOption = new Option<bool>("--verbose", "Print verbose logs");
 
         var success = true;
@@ -85,7 +85,7 @@ internal class NupkgRestorer
               finally
               {
                   // Removing source file once unpacked, or if file is corrupted to retry
-                  //File.Delete(packageFile);
+                  File.Delete(packageFile);
               }
           });
         return successFlag;
