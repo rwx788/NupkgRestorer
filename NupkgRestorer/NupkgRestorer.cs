@@ -33,7 +33,7 @@ internal static class NupkgRestorer
         offlineFeedOption.IsRequired = true;
         packageListOption.IsRequired = true;
 
-        RootCommand rootCommand = new RootCommand("Unpacks nupkgs from packages directory to offline feed folder");
+        var rootCommand = new RootCommand("Unpacks nupkgs from packages directory to offline feed folder");
         rootCommand.AddOption(offlineFeedOption);
         rootCommand.AddOption(onlineSourceFeedOption);
         rootCommand.AddOption(sourcePackageDirOption);
