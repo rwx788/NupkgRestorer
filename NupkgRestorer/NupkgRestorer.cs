@@ -32,6 +32,7 @@ internal static class NupkgRestorer
 
         offlineFeedOption.IsRequired = true;
         packageListOption.IsRequired = true;
+        var watch = System.Diagnostics.Stopwatch.StartNew();
 
         var rootCommand = new RootCommand("Unpacks nupkgs from packages directory to offline feed folder");
         rootCommand.AddOption(offlineFeedOption);
@@ -77,7 +78,7 @@ internal static class NupkgRestorer
         onlineSourceFeed ??= NugetOrgGalleryUrl;
         if (!File.Exists(offlineFeedDirectory))
         {
-            File.Create(offlineFeedDirectory);
+            Directory.CreateDirectory(offlineFeedDirectory);
         }
         Console.WriteLine($"Unpacking packages from {sourcePackageDirOption} to offline feed {offlineFeedDirectory}");
         var parallelOpts = new ParallelOptions { MaxDegreeOfParallelism = 8 };
@@ -86,6 +87,11 @@ internal static class NupkgRestorer
         {
             downloader.SetAuthorizationToken(authToken);
         }
+
+        var processedPackages = 0;
+        var totalPackages = packageSet.Count;
+        var previousProgress = 0;
+        object lockObject = new object();
 
         await Parallel.ForEachAsync(packageSet, parallelOpts,
             async (nuGetPackage, token) =>
@@ -104,8 +110,9 @@ internal static class NupkgRestorer
                         if (verboseLog)
                         {
                             Console.WriteLine(
-                                $"Package {nuGetPackage.Name} {nuGetPackage.Version} expanded successfully.");
+                                $"Package {nuGetPackage.Name} {nuGetPackage.Version} downloaded and restored successfully.");
                         }
+                        Interlocked.Add(ref processedPackages, 1);
                         return;
                     }
                     catch (SignatureException exception)
@@ -129,6 +136,16 @@ internal static class NupkgRestorer
                     }
                     finally
                     {
+                        lock (lockObject)
+                        {
+                            var currentProgress = (int) (Math.Round(1.0 * processedPackages / totalPackages, 2) * 100);
+                            if (currentProgress - previousProgress >= 5 || (currentProgress == 100 && previousProgress != 100))
+                            {
+                                previousProgress = currentProgress;
+                                Console.WriteLine($"Processed NuGet packages {currentProgress}%");
+                            }
+                        }
+
                         // Removing source file once unpacked, or if file is corrupted to retry
                         File.Delete(sourcePackagePath);
                     }
