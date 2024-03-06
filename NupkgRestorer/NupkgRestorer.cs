@@ -21,24 +21,23 @@ internal static class NupkgRestorer
     public static async Task Main(string[] args)
     {
         var offlineFeedOption = new Option<string>("--feed", "The offline feed directory");
+        var packageListOption =
+            new Option<string>("--packages", "Path to the file with the packages list in <package name> <package version>");
         var onlineSourceFeedOption =
             new Option<string>("--source", "URL of the online source feed to download packages from");
         var sourcePackageDirOption =
             new Option<string>("--download-dir", "Directory to temporary store downloaded packages");
-        var packageListOption =
-            new Option<string>("--packages", "Path to the file with the packages list in <package name> <package version>");
         var authTokenOption = new Option<string>("--token", "Authentication token if downloading requires it");
         var verboseLogOption = new Option<bool>("--verbose", "Print verbose logs");
 
         offlineFeedOption.IsRequired = true;
         packageListOption.IsRequired = true;
-        var watch = System.Diagnostics.Stopwatch.StartNew();
 
-        var rootCommand = new RootCommand("Unpacks nupkgs from packages directory to offline feed folder");
+        var rootCommand = new RootCommand("Downloads and unpacks nupkgs from packages directory to offline feed folder");
         rootCommand.AddOption(offlineFeedOption);
+        rootCommand.AddOption(packageListOption);
         rootCommand.AddOption(onlineSourceFeedOption);
         rootCommand.AddOption(sourcePackageDirOption);
-        rootCommand.AddOption(packageListOption);
         rootCommand.AddOption(authTokenOption);
         rootCommand.AddOption(verboseLogOption);
 
