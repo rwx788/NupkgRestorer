@@ -60,15 +60,25 @@ internal static class NupkgRestorer
     }
 
     private static async Task ExpandPackagesFromOfflineFeed(string packagesListFile,
-        string offlineFeedDirectory,
-        string? onlineSourceFeed,
-        string? authToken = null,
-        string? sourcePackageDirOption = null,
-        bool verboseLog = false)
+                                                            string offlineFeedDirectory,
+                                                            string? onlineSourceFeed,
+                                                            string? authToken = null,
+                                                            string? sourcePackageDirOption = null,
+                                                            bool verboseLog = false)
     {
+        if (!File.Exists(packagesListFile))
+        {
+            Console.Error.WriteLine($"Input file {packagesListFile} does not exist");
+            _successFlag = false;
+            return;
+        }
         var packageSet = GetNuGetPackagesSet(packagesListFile);
         sourcePackageDirOption ??= Path.GetTempPath();
         onlineSourceFeed ??= NugetOrgGalleryUrl;
+        if (!File.Exists(offlineFeedDirectory))
+        {
+            File.Create(offlineFeedDirectory);
+        }
         Console.WriteLine($"Unpacking packages from {sourcePackageDirOption} to offline feed {offlineFeedDirectory}");
         var parallelOpts = new ParallelOptions { MaxDegreeOfParallelism = 8 };
         var downloader = new FileDownloader();
@@ -177,13 +187,13 @@ internal record NuGetPackage(string Name, string Version);
 
 internal class FileDownloader
 {
-    private const int MaxRetries = 5;
+    private const int TimeoutMinutes = 3;
     private readonly HttpClient _client;
 
     public FileDownloader()
     {
         _client = new HttpClient();
-        _client.Timeout = TimeSpan.FromMinutes(3);
+        _client.Timeout = TimeSpan.FromMinutes(TimeoutMinutes);
     }
 
     public void SetAuthorizationToken(string authToken)
@@ -194,30 +204,18 @@ internal class FileDownloader
 
     public async Task DownloadFileAsync(string fileUrl, string destinationPath, CancellationToken token)
     {
-        try
+        using var response = await _client.GetAsync(fileUrl, token);
+        response.EnsureSuccessStatusCode();
+        using (var stream = response.Content.ReadAsStream())
+        using (var targetStream = File.OpenWrite(destinationPath))
         {
-            using var response = await _client.GetAsync(fileUrl, token);
-            response.EnsureSuccessStatusCode();
-            using (var stream = response.Content.ReadAsStream())
-            using (var targetStream = File.OpenWrite(destinationPath))
+            var buf = new byte[4096];
+            var n = stream.Read(buf, 0, buf.Length);
+            while (n != 0)
             {
-                var buf = new byte[4096];
-                int n = stream.Read(buf, 0, buf.Length);
-                while (n != 0)
-                {
-                    targetStream.Write(buf, 0, n);
-                    n = stream.Read(buf, 0, buf.Length);
-                }
+                targetStream.Write(buf, 0, n);
+                n = stream.Read(buf, 0, buf.Length);
             }
-        }
-        catch (Exception ex)
-        {
-            if (File.Exists(destinationPath))
-            {
-                File.Delete(destinationPath);
-            }
-
-            throw new Exception($"Failed to download file from {fileUrl}: {ex.Message}");
         }
     }
 }
