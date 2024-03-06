@@ -75,7 +75,7 @@ internal static class NupkgRestorer
         var packageSet = GetNuGetPackagesSet(packagesListFile);
         sourcePackageDirOption ??= Path.GetTempPath();
         onlineSourceFeed ??= NugetOrgGalleryUrl;
-        if (!File.Exists(offlineFeedDirectory))
+        if (!Directory.Exists(offlineFeedDirectory))
         {
             Directory.CreateDirectory(offlineFeedDirectory);
         }
@@ -104,12 +104,23 @@ internal static class NupkgRestorer
                     var sourcePackagePath = Path.Combine(sourcePackageDirOption, packageFileName);
                     try
                     {
-                        await downloader.DownloadFileAsync(sourcePackageUrl, sourcePackagePath, token);
-                        await ExpandPackageAsync(sourcePackagePath, offlineFeedDirectory, token);
-                        if (verboseLog)
+                        if (Directory.Exists(Path.Combine(offlineFeedDirectory, nuGetPackage.Name, nuGetPackage.Version)))
                         {
-                            Console.WriteLine(
-                                $"Package {nuGetPackage.Name} {nuGetPackage.Version} downloaded and restored successfully.");
+                            if (verboseLog)
+                            {
+                                Console.WriteLine(
+                                    $"Package {nuGetPackage.Name} {nuGetPackage.Version} already exists in the offline feed, skipping.");
+                            }
+                        }
+                        else
+                        {
+                            await downloader.DownloadFileAsync(sourcePackageUrl, sourcePackagePath, token);
+                            await ExpandPackageAsync(sourcePackagePath, offlineFeedDirectory, token);
+                            if (verboseLog)
+                            {
+                                Console.WriteLine(
+                                    $"Package {nuGetPackage.Name} {nuGetPackage.Version} downloaded and restored successfully.");
+                            }
                         }
                         Interlocked.Add(ref processedPackages, 1);
                         return;
