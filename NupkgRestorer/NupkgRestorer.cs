@@ -9,18 +9,18 @@ using System.CommandLine;
 
 namespace NupkgRestorer;
 
-internal class NupkgRestorer
+internal static class NupkgRestorer
 {
-    const int SuccessExitCode = 0;
-    const int FailureExitCode = 1;
+    private const int SuccessExitCode = 0;
+    private const int FailureExitCode = 1;
+    private static volatile bool _successFlag = true;
 
     public static async Task Main(string[] args)
     {
         var offlineFeedOption = new Option<string>("--feed", "The offline feed directory");
-        var packagesDirectoryOption = new Option<string>("--packages", "The packages list in <package name> <package version>");
+        var packagesDirectoryOption = new Option<string>("--packages", "The package directory");
         var verboseLogOption = new Option<bool>("--verbose", "Print verbose logs");
 
-        var success = true;
         offlineFeedOption.IsRequired = true;
         packagesDirectoryOption.IsRequired = true;
 
@@ -29,26 +29,24 @@ internal class NupkgRestorer
         rootCommand.AddOption(packagesDirectoryOption);
         rootCommand.AddOption(verboseLogOption);
 
-        rootCommand.SetHandler(async (offlineFeedDirectory, packagesDirectory, verboseLog) => 
-            { 
-                success = await ExpandPackagesFromOfflineFeed(offlineFeedDirectory, packagesDirectory, verboseLog);
+        rootCommand.SetHandler(async (offlineFeedDirectory, packagesDirectory, verboseLog) =>
+            {
+                await ExpandPackagesFromOfflineFeed(offlineFeedDirectory, packagesDirectory, verboseLog);
             },
             offlineFeedOption,
             packagesDirectoryOption,
             verboseLogOption);
-        
+
         await rootCommand.InvokeAsync(args);
 
-        Environment.Exit(success ? SuccessExitCode : FailureExitCode);
+        Environment.Exit(_successFlag ? SuccessExitCode : FailureExitCode);
     }
 
-    private static async Task<bool> ExpandPackagesFromOfflineFeed(string offlineFeedDirectory, string packagesDirectory, bool verboseLog)
+    private static async Task ExpandPackagesFromOfflineFeed(string offlineFeedDirectory, string packagesDirectory, bool verboseLog)
     {
         Console.WriteLine($"Unpacking packages from {packagesDirectory} to offline feed {offlineFeedDirectory}");
         var packageFiles = Directory.GetFiles(packagesDirectory, "*" + PackagingCoreConstants.NupkgExtension);
         var parallelOpts = new ParallelOptions { MaxDegreeOfParallelism = 4 };
-        bool successFlag = true;
-        object lockObject = new object();
 
         await Parallel.ForEachAsync(packageFiles, parallelOpts,
           async (packageFile, token) =>
@@ -69,18 +67,12 @@ internal class NupkgRestorer
                           Console.Error.WriteLine($"    Issue: {issue.Level} {issue.Code} {issue.Message}");
                       }
                   }
-                  lock (lockObject)
-                  {
-                      successFlag = false;
-                  }
+                  _successFlag = false;
               }
               catch (Exception exception)
               {
                   Console.Error.WriteLine($"Unknown Error during loading package: {exception.Message}");
-                  lock (lockObject)
-                  {
-                      successFlag = false;
-                  }
+                  _successFlag = false;
               }
               finally
               {
@@ -88,7 +80,6 @@ internal class NupkgRestorer
                   File.Delete(packageFile);
               }
           });
-        return successFlag;
     }
 
     private static async Task ExpandPackageAsync(string packageFilePath, string packageDirectory, bool verboseLog, CancellationToken token)
@@ -107,7 +98,7 @@ internal class NupkgRestorer
             false,
             false,
             packageExtractionContext);
-        
+
         await OfflineFeedUtility.AddPackageToSource(offlineFeedAddContext, token);
         if (verboseLog)
         {
