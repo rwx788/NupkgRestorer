@@ -73,11 +73,15 @@ internal static class NupkgRestorer
             return;
         }
         var packageSet = GetNuGetPackagesSet(packagesListFile);
-        sourcePackageDirOption ??= Path.GetTempPath();
+        sourcePackageDirOption ??= Path.Combine(Path.GetTempPath(), "NugetSourceDir");
         onlineSourceFeed ??= NugetOrgGalleryUrl;
         if (!Directory.Exists(offlineFeedDirectory))
         {
             Directory.CreateDirectory(offlineFeedDirectory);
+        }
+        if (!Directory.Exists(sourcePackageDirOption))
+        {
+            Directory.CreateDirectory(sourcePackageDirOption);
         }
         Console.WriteLine($"Unpacking packages from {sourcePackageDirOption} to offline feed {offlineFeedDirectory}");
         var parallelOpts = new ParallelOptions { MaxDegreeOfParallelism = 8 };
