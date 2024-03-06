@@ -22,11 +22,11 @@ internal static class NupkgRestorer
     {
         var offlineFeedOption = new Option<string>("--feed", "The offline feed directory");
         var onlineSourceFeedOption =
-            new Option<string>("--source-gallery", "URL of the online source feed to download packages from");
+            new Option<string>("--source", "URL of the online source feed to download packages from");
         var sourcePackageDirOption =
-            new Option<string>("--tmp-dir", "Directory to temporary store downloaded packages");
+            new Option<string>("--download-dir", "Directory to temporary store downloaded packages");
         var packageListOption =
-            new Option<string>("--packages", "The packages list in <package name> <package version>");
+            new Option<string>("--packages", "Path to the file with the packages list in <package name> <package version>");
         var authTokenOption = new Option<string>("--token", "Authentication token if downloading requires it");
         var verboseLogOption = new Option<bool>("--verbose", "Print verbose logs");
 
