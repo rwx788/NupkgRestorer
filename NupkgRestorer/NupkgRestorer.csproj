@@ -2,15 +2,15 @@
 
     <PropertyGroup>
         <OutputType>Exe</OutputType>
-        <TargetFramework>net8.0</TargetFramework>
+        <TargetFramework>net9.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="NuGet.Common" Version="6.8.0" />
-        <PackageReference Include="NuGet.Protocol" Version="6.8.0" />
-        <PackageReference Include="NuGet.Versioning" Version="6.8.0" />
+        <PackageReference Include="NuGet.Common" Version="6.14.0" />
+        <PackageReference Include="NuGet.Protocol" Version="6.14.0" />
+        <PackageReference Include="NuGet.Versioning" Version="6.14.0" />
         <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
     </ItemGroup>
 
